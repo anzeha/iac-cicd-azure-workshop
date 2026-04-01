@@ -1,0 +1,26 @@
+parameters:
+  - name: imageRepository
+    type: string
+  - name: dockerfile
+    type: string
+  - name: buildContext
+    type: string
+    default: .
+  - name: versionTag
+    type: string
+
+steps:
+  - task: Docker@2
+    displayName: Build and push ${{ parameters.imageRepository }}
+    inputs:
+      command: buildAndPush
+      containerRegistry: $(azureCrServiceConnection)
+      repository: ${{ parameters.imageRepository }}
+      dockerfile: ${{ parameters.dockerfile }}
+      buildContext: ${{ parameters.buildContext }}
+      tags: ${{ parameters.versionTag }},latest
+
+  - script: |
+      echo "Successfully built and pushed image: ${{ parameters.imageRepository }}:${{ parameters.versionTag }},latest"
+    displayName: Success message
+    condition: succeeded()

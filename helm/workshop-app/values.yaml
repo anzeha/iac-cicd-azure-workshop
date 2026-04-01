@@ -1,0 +1,96 @@
+global:
+  environment: prod
+  workloadIdentity:
+    enabled: true
+    clientId: "ac65611b-c927-4f33-8704-5ca2c0537784"
+    tenantId: "368e92b5-dfa0-4bce-9594-4c2e6fd2d1eb"
+
+keyVault:
+  name: "nlb-workshop-jqya2j-kv"
+  tenantId: "368e92b5-dfa0-4bce-9594-4c2e6fd2d1eb"
+  managedIdentityClientId: "957d570a-efd9-482e-999a-8d5e284d7e36"
+  secretProviderClassName: workshop-app-secrets
+  secrets:
+    readModelConnectionString: read-model-connection-string
+    eventHubsConnectionString: eventhubs-connection-string
+    checkpointStorageConnectionString: blob-checkpoint-connection-string
+    serviceBusConnectionString: servicebus-connection-string
+
+images:
+  api:
+    repository: "workshop-api"
+    tag: latest
+    pullPolicy: IfNotPresent
+  consumer:
+    repository: "workshop-consumer"
+    tag: latest
+    pullPolicy: IfNotPresent
+
+config:
+  messagingProvider: EventHubs
+  eventHubName: orders
+  consumerGroup: projection
+  replayConsumerGroup: replay
+  checkpointContainerName: checkpoints
+  defaultPayloadFormat: json
+  aspnetcoreEnvironment: Production
+  dotnetEnvironment: Production
+
+api:
+  replicaCount: 1
+  service:
+    port: 80
+    targetPort: 8080
+    type: ClusterIP
+  containerPort: 8080
+  ingress:
+    enabled: true
+    className: nginx
+    host: workshop-api.example.com
+    path: /
+    pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+consumer:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+kafkaUi:
+  enabled: true
+  image:
+    repository: provectuslabs/kafka-ui
+    tag: v0.7.2
+    pullPolicy: IfNotPresent
+  clusterName: eventhubs
+  bootstrapServers: "nlb-workshop-prod-jqya2j-evh.servicebus.windows.net:9093"
+  service:
+    port: 80
+    targetPort: 8080
+    type: ClusterIP
+  ingress:
+    enabled: true
+    className: nginx
+    host: workshop-kafka-ui.example.com
+    path: /
+    pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

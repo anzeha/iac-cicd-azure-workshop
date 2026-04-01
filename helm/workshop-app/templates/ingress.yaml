@@ -1,0 +1,26 @@
+{{- if .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "workshop-app.fullname" . }}-api
+  labels:
+    {{- include "workshop-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  ingressClassName: {{ .Values.api.ingress.className }}
+  rules:
+    - host: {{ .Values.api.ingress.host }}
+      http:
+        paths:
+          - path: {{ .Values.api.ingress.path }}
+            pathType: {{ .Values.api.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "workshop-app.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+  {{- if .Values.api.ingress.tls }}
+  tls:
+    {{- toYaml .Values.api.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}

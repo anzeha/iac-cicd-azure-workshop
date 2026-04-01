@@ -1,0 +1,18 @@
+{{- if .Values.kafkaUi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "workshop-app.fullname" . }}-kafka-ui
+  labels:
+    {{- include "workshop-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+spec:
+  type: {{ .Values.kafkaUi.service.type }}
+  selector:
+    {{- include "workshop-app.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+  ports:
+    - name: http
+      port: {{ .Values.kafkaUi.service.port }}
+      targetPort: {{ .Values.kafkaUi.service.targetPort }}
+{{- end }}

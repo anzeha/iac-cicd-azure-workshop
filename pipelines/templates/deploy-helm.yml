@@ -1,0 +1,66 @@
+parameters:
+  - name: environmentName
+    type: string
+    default: dev
+
+steps:
+  - task: HelmInstaller@1
+    displayName: Install Helm
+    inputs:
+      helmVersionToInstall: 3.14.4
+
+  - script: |
+      set -euo pipefail
+
+      chart_version=$(grep '^version:' ./Chart.yaml | sed 's/version:[[:space:]]*//')
+      echo "##vso[task.setvariable variable=version;isOutput=true]$chart_version"
+    name: ReadHelmChart
+    workingDirectory: $(Build.SourcesDirectory)/helm/workshop-app
+    condition: succeeded()
+
+  - script: |
+      set -euo pipefail
+
+      echo "Fixing dpkg state if needed..."
+      sudo rm -f /var/lib/dpkg/lock-frontend || true
+      sudo dpkg --configure -a || true
+      sudo apt-get update
+      sudo apt-get install -y unzip
+    displayName: "Fix dpkg state + Install unzip"
+    name: FixDpkgStateAndInstallUnzip
+    condition: succeeded()
+
+  - task: KubeloginInstaller@0
+    condition: succeeded()
+
+  - task: KubectlInstaller@0
+    condition: succeeded()
+
+  - script: |
+      set -euo pipefail
+
+      curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      helm version
+    displayName: "Install helm"
+    condition: succeeded()
+
+  - script: |
+      echo "HelmChartVersion: $(ReadHelmChart.version)"
+      echo "env: $(env)"
+    displayName: "Print debug variables"
+    condition: succeeded()
+
+  - task: HelmDeploy@1
+    inputs:
+      connectionType: "Azure Resource Manager"
+      azureSubscription: $(azureRmServiceConnection)
+      azureResourceGroup: $(azureResourceGroup)
+      kubernetesCluster: $(azureKubernetesCluster)
+      command: "upgrade"
+      chartType: "FilePath"
+      chartPath: $(Build.SourcesDirectory)/helm/workshop-app
+      chartVersion: $(ReadHelmChart.version)
+      namespace: "workshop-${{ parameters.environmentName }}"
+      releaseName: "workshop-app-${{ parameters.environmentName }}"
+      valueFile: "$(Build.SourcesDirectory)/helm/workshop-app/values-${{ parameters.environmentName }}.yaml"
+    condition: succeeded()

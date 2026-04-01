@@ -1,0 +1,38 @@
+parameters:
+  - name: imageTag
+    type: string
+
+jobs:
+  - job: ValuesUpdate
+    variables:
+      - name: IMAGE_TAG
+        value: ${{parameters.imageTag}}
+    displayName: "Updates values.yaml with new image versions"
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - script: |
+          echo "======== parameters ========"
+          echo "imageTag: ${{parameters.imageTag}}"
+          echo "============================"
+        displayName: "Print input parameters"
+
+      - script: |
+          git config --global user.email "devops@nlb.si"
+          git config --global user.name "Azure Gitić"
+        name: GitGlobals
+
+      - script: |
+          set -euo pipefail
+
+          git pull origin main
+
+          ./scripts/update-version.sh ${{parameters.imageTag}} --values-file ./helm/workshop-app/values.yaml
+
+          git push origin HEAD:main
+
+        displayName: "Update image versions"
+        condition: succeeded()
+        workingDirectory: $(Build.SourcesDirectory)
+        name: UpdateImageVersion

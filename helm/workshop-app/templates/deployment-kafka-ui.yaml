@@ -1,0 +1,58 @@
+{{- if .Values.kafkaUi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "workshop-app.fullname" . }}-kafka-ui
+  labels:
+    {{- include "workshop-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "workshop-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kafka-ui
+  template:
+    metadata:
+      labels:
+        {{- include "workshop-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: "{{ .Values.kafkaUi.image.repository }}:{{ .Values.kafkaUi.image.tag }}"
+          imagePullPolicy: {{ .Values.kafkaUi.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.kafkaUi.service.targetPort }}
+              name: http
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: {{ .Values.kafkaUi.clusterName | quote }}
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: {{ .Values.kafkaUi.bootstrapServers | quote }}
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL
+              value: SASL_SSL
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM
+              value: PLAIN
+            - name: KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG
+              value: org.apache.kafka.common.security.plain.PlainLoginModule required username="$ConnectionString" password="${EVENTHUBS_CONNECTION_STRING}";
+            - name: EVENTHUBS_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workshop-app.secretName" . }}
+                  key: Messaging__EventHubs__ConnectionString
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.kafkaUi.resources | nindent 12 }}
+{{- end }}

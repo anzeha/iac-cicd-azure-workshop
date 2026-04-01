@@ -1,0 +1,16 @@
+global:
+  environment: prod
+  dockerRegistry: "nlbworkshopprodjqya2jacr.azurecr.io"
+
+api:
+  replicaCount: 1
+  ingress:
+    host: workshop-api.example.com
+
+consumer:
+  replicaCount: 1
+
+kafkaUi:
+  enabled: true
+  ingress:
+    host: workshop-kafka-ui.example.com

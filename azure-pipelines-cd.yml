@@ -1,0 +1,22 @@
+trigger: none
+
+variables:
+  - group: workshop-common
+  - group: workshop-prod
+
+pool:
+  vmImage: "ubuntu-latest"
+
+stages:
+  - stage: Deploy
+    displayName: "Deploy chart to AKS cluster"
+    jobs:
+      - job: cd
+        displayName: CD
+        steps:
+          - checkout: self
+            clean: true
+
+          - template: pipelines/templates/deploy-helm.yml
+            parameters:
+              environmentName: prod

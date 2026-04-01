@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "workshop-app.fullname" . }}-consumer
+  labels:
+    {{- include "workshop-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: consumer
+spec:
+  replicas: {{ .Values.consumer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "workshop-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: consumer
+  template:
+    metadata:
+      labels:
+        {{- include "workshop-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: consumer
+    spec:
+      serviceAccountName: {{ include "workshop-app.fullname" . }}
+      containers:
+        - name: consumer
+          image: "{{.Values.global.dockerRegistry}}/{{ .Values.images.consumer.repository }}:{{ .Values.images.consumer.tag }}"
+          imagePullPolicy: {{ .Values.images.consumer.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "workshop-app.fullname" . }}-config
+          env:
+            - name: ConnectionStrings__ReadModel
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workshop-app.secretName" . }}
+                  key: ConnectionStrings__ReadModel
+            - name: Messaging__EventHubs__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workshop-app.secretName" . }}
+                  key: Messaging__EventHubs__ConnectionString
+            - name: Messaging__EventHubs__CheckpointBlobConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workshop-app.secretName" . }}
+                  key: Messaging__EventHubs__CheckpointBlobConnectionString
+            - name: Messaging__AzureServiceBus__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workshop-app.secretName" . }}
+                  key: Messaging__AzureServiceBus__ConnectionString
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: /mnt/secrets-store
+              readOnly: true
+          resources:
+            {{- toYaml .Values.consumer.resources | nindent 12 }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Values.keyVault.secretProviderClassName }}

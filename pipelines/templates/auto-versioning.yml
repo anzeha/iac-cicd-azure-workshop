@@ -1,0 +1,72 @@
+jobs:
+  - job: UpdateVersionBranches
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - script: |
+          git config --global user.email "devops@nlb.si"
+          git config --global user.name "Azure Gitić"
+        name: GitGlobals
+
+      - task: UseDotNet@2
+        inputs:
+          version: 10.0.x
+          workingDirectory: $(Build.SourcesDirectory)
+
+      - script: |
+          dotnet tool install --global Versionize
+        displayName: "Install Versionize"
+
+      - script: |
+          echo "##vso[task.setvariable variable=PATH]$(PATH):~/.dotnet/tools"
+        displayName: "Add dotnet tools to PATH"
+
+      - script: |
+          currentVersion="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Nlb.Workshop.Api.csproj)"
+          echo "##vso[task.setvariable variable=currentVersion]$currentVersion"
+        displayName: "Read current version"
+        workingDirectory: "$(Build.SourcesDirectory)/Nlb.Workshop.Api"
+        name: currentVersion
+
+      - script: |
+          set -euo pipefail
+
+          # Must end with .<digits>
+          if [[ "$(currentVersion)" =~ ^(.+)\.([0-9]+)$ ]]; then
+            prefix="${BASH_REMATCH[1]}"
+            lastnum="${BASH_REMATCH[2]}"
+            newReleaseVersion="${prefix}.$((lastnum + 1))"
+          else
+            echo "ERROR: Version '$(currentVersion)' does not match expected format (must end with .<number>)"
+            exit 1
+          fi
+
+          echo "Bumped version: $newReleaseVersion"
+          echo "##vso[task.setvariable variable=newReleaseVersion]$newReleaseVersion"
+
+        displayName: "Set new release version"
+        name: SetNewReleaseVersion
+
+      - script: |
+          echo "newReleaseVersion: $(newReleaseVersion)"
+        displayName: "Print debug variables"
+
+      - script: |
+          set -euo pipefail
+
+          git fetch origin main
+          git checkout main
+          git pull origin main
+
+          versionize --skip-commit --skip-tag --release-as $(newReleaseVersion)
+
+          git commit -am "chore(release): $(newReleaseVersion) [skip ci]"
+
+          git tag -a "v$(newReleaseVersion)" -m "$(newReleaseVersion)"
+
+          git push origin main
+          git push origin main --tags
+
+        displayName: "Run Versionize on release branch"
+        workingDirectory: "$(Build.SourcesDirectory)"
