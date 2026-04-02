@@ -45,3 +45,15 @@ stages:
               imageRepository: workshop-consumer
               dockerfile: Nlb.Workshop.Consumer.Worker/Dockerfile
               versionTag: $(ReadProjectVersion.version)
+
+  - stage: ValuesUpdate
+    displayName: "Update value file for chart"
+    dependsOn: BuildValidatePackage
+    condition: succeeded()
+    variables:
+      - name: ImageTag
+        value: $[ stageDependencies.BuildValidatePackage.ci.outputs['ReadProjectVersion.version'] ]
+    jobs:
+      - template: pipelines/templates/values-update.yml
+        parameters:
+          imageTag: $(ImageTag)

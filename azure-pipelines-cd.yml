@@ -1,5 +1,14 @@
 trigger: none
 
+resources:
+  pipelines:
+    - pipeline: ci
+      source: CI
+      trigger:
+        branches:
+          include:
+            - main
+
 variables:
   - group: workshop-common
   - group: workshop-prod
@@ -20,3 +29,10 @@ stages:
           - template: pipelines/templates/deploy-helm.yml
             parameters:
               environmentName: prod
+
+  - stage: Versioning
+    displayName: "Update project version"
+    dependsOn: Deploy
+    condition: succeeded()
+    jobs:
+      - template: pipelines/templates/auto-versioning.yml
