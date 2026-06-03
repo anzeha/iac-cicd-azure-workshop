@@ -1,0 +1,50 @@
+name: Banking CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+env:
+  DOTNET_VERSION: 10.0.x
+
+jobs:
+  validate:
+    name: Build, Test & Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore nlb-workshop-azure.slnx
+
+      - name: Build application
+        run: dotnet build nlb-workshop-azure.slnx --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test nlb-workshop-azure.slnx --configuration Release --no-build --verbosity normal
+
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-images:
+    name: Build, Scan & Push Docker Images
+    needs: validate
+    uses: ./.github/workflows/docker-images.yml
+    with:
+      push-images: ${{ github.event_name == 'push' }}
+    secrets: inherit
