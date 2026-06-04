@@ -93,3 +93,5 @@ dotnet build nlb-workshop-azure.slnx
 
 1. Session 1: Bicep and Azure resource provisioning
 2. Session 2: Helm, AKS, and Azure DevOps CI/CD
+
+Dodamo
